@@ -1,93 +1,92 @@
-let coin = parseInt(prompt("Enter the number of rounds you want to play:"));
+// --- Element references ---
+const humanScoreEl = document.querySelector("#humanScore");
+const computerScoreEl = document.querySelector("#computerScore");
+const resultEl = document.querySelector("#result");
+const choicesEl = document.querySelector("#choices");
+const finalEl = document.querySelector("#final");
+const finalHeadline = document.querySelector("#finalHeadline");
+const finalSub = document.querySelector("#finalSub");
+const resetBtn = document.querySelector("#resetBtn");
 
+// --- State ---
 let humanScore = 0;
 let computerScore = 0;
+const WINNING_SCORE = 5;
 
-// Function to get computer's choice
+// --- Pure logic (no DOM, no I/O — reusable) ---
 function getComputerChoice() {
-  let value = Math.floor(Math.random() * 3);
+  const options = ["rock", "paper", "scissors"];
+  return options[Math.floor(Math.random() * 3)];
+}
 
-  if (value === 0) {
-    return "rock";
-  } else if (value === 1) {
-    return "paper";
-  } else {
-    return "scissors";
+// Returns "win" | "lose" | "draw" from the human's point of view
+function getOutcome(human, computer) {
+  if (human === computer) return "draw";
+  const humanWins =
+    (human === "rock" && computer === "scissors") ||
+    (human === "paper" && computer === "rock") ||
+    (human === "scissors" && computer === "paper");
+  return humanWins ? "win" : "lose";
+}
+
+// --- One round, driven by whichever button was clicked ---
+function playRound(humanChoice) {
+  const computerChoice = getComputerChoice();
+  const outcome = getOutcome(humanChoice, computerChoice);
+
+  if (outcome === "win") humanScore++;
+  if (outcome === "lose") computerScore++;
+
+  renderRound(humanChoice, computerChoice, outcome);
+  updateScore();
+
+  if (humanScore === WINNING_SCORE || computerScore === WINNING_SCORE) {
+    endGame();
   }
 }
 
-// Function to get human's choice
-function getHumanChoice() {
-  let choice = prompt("Select your choice:\n1. Rock\n2. Paper\n3. Scissors");
-
-  if (choice === "1") {
-    return "rock";
-  } else if (choice === "2") {
-    return "paper";
-  } else if (choice === "3") {
-    return "scissors";
-  } else {
-    return choice.toLowerCase();
-  }
+// --- Rendering helpers (all DOM writes live here) ---
+function updateScore() {
+  humanScoreEl.textContent = humanScore;
+  computerScoreEl.textContent = computerScore;
 }
 
-// Function to play one round
-function playRound(humanChoice, computerChoice) {
-  // Check for invalid input
-  if (
-    humanChoice !== "rock" &&
-    humanChoice !== "paper" &&
-    humanChoice !== "scissors"
-  ) {
-    console.log("❌ Invalid Choice!");
-    return;
-  }
-
-  console.log("-------------------------");
-  console.log("You Chose      :", humanChoice);
-  console.log("Computer Chose :", computerChoice);
-
-  if (humanChoice === computerChoice) {
-    console.log("🤝 It's a Draw!");
-  } else if (
-    (humanChoice === "rock" && computerChoice === "scissors") ||
-    (humanChoice === "paper" && computerChoice === "rock") ||
-    (humanChoice === "scissors" && computerChoice === "paper")
-  ) {
-    console.log("✅ You Win This Round!");
-    humanScore++;
-  } else {
-    console.log("❌ Computer Wins This Round!");
-    computerScore++;
-  }
-
-  console.log("Score");
-  console.log("You      :", humanScore);
-  console.log("Computer :", computerScore);
+function renderRound(human, computer, outcome) {
+  const messages = {
+    win: "You win this round",
+    lose: "Computer wins this round",
+    draw: "It's a draw",
+  };
+  resultEl.className = "result " + outcome;
+  resultEl.innerHTML =
+    messages[outcome] +
+    `<span class="detail">You: ${human} · Computer: ${computer}</span>`;
 }
 
-// Main Game Loop
-while (coin > 0) {
-  console.log("\nRound :", coin);
-
-  let computerChoice = getComputerChoice();
-  let humanChoice = getHumanChoice();
-
-  playRound(humanChoice, computerChoice);
-
-  coin--;
+function endGame() {
+  const humanWon = humanScore > computerScore;
+  choicesEl.classList.add("hidden");
+  finalEl.classList.remove("hidden");
+  finalHeadline.textContent = humanWon ? "You won! 🎉" : "Computer won 💻";
+  finalHeadline.className = "headline " + (humanWon ? "win" : "lose");
+  finalSub.textContent = `Final score ${humanScore}–${computerScore}`;
 }
 
-// Final Result
-console.log("\n======================");
-console.log("Final Score");
-console.log("You      :", humanScore);
-console.log("Computer :", computerScore);
-
-if (humanScore > computerScore) {
-  console.log("🎉 Congratulations! You Won the Game.");
-} else if (computerScore > humanScore) {
-  console.log("💻 Computer Won the Game.");
-} else {
-  console.log("🤝 The Game Ended in a Draw.");
+function resetGame() {
+  humanScore = 0;
+  computerScore = 0;
+  updateScore();
+  resultEl.className = "result";
+  resultEl.textContent = "Pick a move to start.";
+  finalEl.classList.add("hidden");
+  choicesEl.classList.remove("hidden");
 }
+
+// --- Wiring: one listener for all three buttons (event delegation) ---
+choicesEl.addEventListener("click", (event) => {
+  const button = event.target.closest(".choice");
+  if (!button) return; // clicked the gap, not a button
+  playRound(button.dataset.choice);
+});
+
+resetBtn.addEventListener("click", resetGame);
